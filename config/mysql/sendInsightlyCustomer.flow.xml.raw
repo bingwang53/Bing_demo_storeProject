@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  RAW DRAFT ONLY (not guaranteed executable as-is by IS parser).
+  Use this as a step blueprint in Designer for service:
+  project.bing_demo_store.integrations:sendInsightlyCustomer
+-->
+<FLOW VERSION="3.0" CLEANUP="true">
+  <SEQUENCE EXIT-ON="FAILURE"/>
+
+  <!-- Step 1: Build contactDoc -->
+  <MAP COMMENT="Build Insightly contact document">
+    <COPY FROM="firstName" TO="contactDoc/FIRST_NAME"/>
+    <COPY FROM="lastName" TO="contactDoc/LAST_NAME"/>
+    <COPY FROM="email" TO="contactDoc/EMAIL_ADDRESS"/>
+  </MAP>
+
+  <!-- Step 2: Convert contactDoc -> jsonString -->
+  <INVOKE SERVICE="pub.json:documentToJSONString">
+    <MAP>
+      <COPY FROM="contactDoc" TO="document"/>
+      <COPY FROM="jsonString" TO="jsonString"/>
+    </MAP>
+  </INVOKE>
+
+  <!-- Step 3: Build Basic auth header -->
+  <INVOKE SERVICE="pub.string:concat">
+    <MAP>
+      <COPY FROM="insightlyApiKey" TO="inString1"/>
+      <SET NAME="inString2" VALUE=":"/>
+      <COPY FROM="value" TO="authRaw"/>
+    </MAP>
+  </INVOKE>
+
+  <INVOKE SERVICE="pub.string:base64Encode">
+    <MAP>
+      <COPY FROM="authRaw" TO="string"/>
+      <COPY FROM="base64" TO="authB64"/>
+    </MAP>
+  </INVOKE>
+
+  <INVOKE SERVICE="pub.string:concat">
+    <MAP>
+      <SET NAME="inString1" VALUE="Basic "/>
+      <COPY FROM="authB64" TO="inString2"/>
+      <COPY FROM="value" TO="authorization"/>
+    </MAP>
+  </INVOKE>
+
+  <!-- Step 4: HTTP POST /Contacts -->
+  <MAP COMMENT="Prepare HTTP inputs">
+    <SET NAME="method" VALUE="post"/>
+    <SET NAME="loadAs" VALUE="bytes"/>
+    <COPY FROM="jsonString" TO="data/string"/>
+  </MAP>
+
+  <INVOKE SERVICE="pub.string:concat">
+    <MAP>
+      <COPY FROM="insightlyBaseUrl" TO="inString1"/>
+      <SET NAME="inString2" VALUE="/Contacts"/>
+      <COPY FROM="value" TO="url"/>
+    </MAP>
+  </INVOKE>
+
+  <MAP COMMENT="HTTP headers">
+    <COPY FROM="authorization" TO="headers/Authorization"/>
+    <SET NAME="headers/Content-Type" VALUE="application/json"/>
+  </MAP>
+
+  <INVOKE SERVICE="pub.client:http"/>
+
+  <!-- Step 5: Map outputs -->
+  <MAP COMMENT="Output mapping">
+    <COPY FROM="status" TO="statusCode"/>
+    <COPY FROM="body/string" TO="responseBody"/>
+  </MAP>
+
+  <BRANCH SWITCH="/statusCode">
+    <SEQUENCE CASE="2*">
+      <MAP><SET NAME="success" VALUE="true"/></MAP>
+    </SEQUENCE>
+    <SEQUENCE CASE="$default">
+      <MAP><SET NAME="success" VALUE="false"/></MAP>
+    </SEQUENCE>
+  </BRANCH>
+</FLOW>
