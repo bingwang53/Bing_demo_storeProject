@@ -21,8 +21,8 @@ Expected behavior:
 In IS Admin:
 1. Go to `Settings -> JDBC Pools`.
 2. Create a pool alias, for example `LocalMySQLPool`.
-3. Use MySQL JDBC URL similar to:
-   - `jdbc:mysql://localhost:3306/<db_name>?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC`
+3. Use MySQL JDBC URL:
+   - `jdbc:mysql://localhost:3306/product_order_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC`
 4. Set username/password and enable the pool.
 
 ## 3) Implement `sendOrderWebhook` service

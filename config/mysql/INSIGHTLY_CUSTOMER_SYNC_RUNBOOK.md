@@ -21,7 +21,7 @@ In IS Admin:
 1. Open `Settings -> JDBC Pools`.
 2. Create alias, e.g. `LocalMySQLPool`.
 3. Use URL format:
-   - `jdbc:mysql://localhost:3306/<db_name>?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC`
+   - `jdbc:mysql://localhost:3306/product_order_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC`
 4. Set username/password and enable the pool.
 
 ## 3) Insightly API prerequisites
