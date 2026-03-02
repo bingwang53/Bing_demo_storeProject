@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  RAW DRAFT ONLY (not guaranteed executable as-is by IS parser).
+  Use this as a step blueprint in Designer for service:
+  project.bing_demo_store.integrations:sendOrderWebhook
+-->
+<FLOW VERSION="3.0" CLEANUP="true">
+  <SEQUENCE EXIT-ON="FAILURE"/>
+
+  <!-- Step 1: Build payload -->
+  <MAP COMMENT="Build order payload document">
+    <COPY FROM="orderId" TO="payload/orderId"/>
+    <COPY FROM="customerId" TO="payload/customerId"/>
+    <COPY FROM="orderAmount" TO="payload/orderAmount"/>
+    <COPY FROM="orderStatus" TO="payload/orderStatus"/>
+    <COPY FROM="createdAt" TO="payload/createdAt"/>
+  </MAP>
+
+  <!-- Step 2: Convert payload document to JSON object -->
+  <MAP COMMENT="Map payload to pub.json:documentToJSON input">
+    <COPY FROM="payload" TO="document"/>
+  </MAP>
+
+  <INVOKE SERVICE="pub.json:documentToJSON"/>
+
+  <!-- Step 3: Prepare HTTP call -->
+  <MAP COMMENT="Prepare outbound HTTP inputs">
+    <COPY FROM="webhookUrl" TO="url"/>
+    <SET NAME="method" VALUE="post"/>
+    <SET NAME="loadAs" VALUE="string"/>
+    <SET NAME="headers/Content-Type" VALUE="application/json"/>
+    <COPY FROM="jsonObj" TO="data/string"/>
+  </MAP>
+
+  <!-- Step 4: Execute HTTP call -->
+  <INVOKE SERVICE="pub.client:http"/>
+
+  <!-- Step 5: Map outputs -->
+  <MAP COMMENT="Map HTTP outputs to service outputs">
+    <COPY FROM="status" TO="statusCode"/>
+    <COPY FROM="body/string" TO="responseBody"/>
+  </MAP>
+
+  <!-- Step 6: success=true when HTTP 2xx -->
+  <BRANCH SWITCH="/statusCode">
+    <SEQUENCE CASE="2*">
+      <MAP><SET NAME="success" VALUE="true"/></MAP>
+    </SEQUENCE>
+    <SEQUENCE CASE="$default">
+      <MAP><SET NAME="success" VALUE="false"/></MAP>
+    </SEQUENCE>
+  </BRANCH>
+</FLOW>

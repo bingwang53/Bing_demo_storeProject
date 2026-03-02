@@ -4,6 +4,6 @@
   <value name="node_type">interface</value>
   <value name="node_subtype">unknown</value>
   <value name="node_nsName">project.bing_demo_store.documenttypes</value>
-  <value name="node_pkg">Bing_demo_storeProject</value>
+  <value name="node_pkg">Bing_Demo_StoreProject</value>
   <value name="is_public">false</value>
 </Values>

@@ -4,7 +4,7 @@
   <value name="enabled">yes</value>
   <value name="system_package">no</value>
   <value name="version">1.0</value>
-  <value name="name">Bing_demo_storeProject</value>
+  <value name="name">Bing_Demo_StoreProject</value>
   <null name="startup_services"/>
   <null name="shutdown_services"/>
   <null name="replication_services"/>

@@ -2,7 +2,7 @@ version: "1.0"
 info:
   model: int-scaffold
 packages:
-- name: Bing_demo_storeProject
+- name: Bing_Demo_StoreProject
   gitServerName: github_bing
   gitUrl: https://github.com/bingwang53
   gitUsername: bingwang53

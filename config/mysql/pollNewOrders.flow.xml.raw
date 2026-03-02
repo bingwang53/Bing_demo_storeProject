@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  RAW DRAFT ONLY (not guaranteed executable as-is by IS parser).
+  Use this as a step blueprint in Designer for service:
+  project.bing_demo_store.integrations:pollNewOrders
+
+  Prereqs:
+  - JDBC pool alias exists (example: MySQL_Store)
+  - Table structure from config/mysql/orders_webhook_setup.sql
+-->
+<FLOW VERSION="3.0" CLEANUP="true">
+  <SEQUENCE EXIT-ON="FAILURE"/>
+
+  <!-- Step 1: init counters -->
+  <MAP COMMENT="Initialize output counters">
+    <SET NAME="processedCount" VALUE="0"/>
+    <SET NAME="failedCount" VALUE="0"/>
+  </MAP>
+
+  <!-- Step 2: select candidate rows -->
+  <MAP COMMENT="Prepare select SQL">
+    <COPY FROM="jdbcPoolAlias" TO="poolName"/>
+    <SET NAME="sql">SELECT id, customer_id, amount, status, created_at
+FROM orders
+WHERE webhook_status IN ('NEW','FAILED')
+ORDER BY id ASC
+LIMIT ?</SET>
+    <COPY FROM="batchSize" TO="args/arg[0]"/>
+  </MAP>
+
+  <INVOKE SERVICE="pub.db:execSQL"/>
+
+  <!-- Expected output list variable name depends on IS version/services used.
+       In Designer, map the actual row list to rows[] before LOOP. -->
+  <MAP COMMENT="Normalize result list name to rows[]">
+    <COPY FROM="results" TO="rows"/>
+  </MAP>
+
+  <!-- Step 3: loop rows and send webhook -->
+  <LOOP IN="/rows" OUT="/row">
+    <MAP COMMENT="Call sendOrderWebhook">
+      <COPY FROM="webhookUrl" TO="webhookUrl"/>
+      <COPY FROM="row/id" TO="orderId"/>
+      <COPY FROM="row/customer_id" TO="customerId"/>
+      <COPY FROM="row/amount" TO="orderAmount"/>
+      <COPY FROM="row/status" TO="orderStatus"/>
+      <COPY FROM="row/created_at" TO="createdAt"/>
+    </MAP>
+
+    <INVOKE SERVICE="project.bing_demo_store.integrations:sendOrderWebhook"/>
+
+    <BRANCH SWITCH="/success">
+      <SEQUENCE CASE="true">
+        <MAP COMMENT="Mark SENT">
+          <COPY FROM="jdbcPoolAlias" TO="poolName"/>
+          <SET NAME="sql">UPDATE orders
+SET webhook_status='SENT',
+    webhook_sent_at=NOW(),
+    webhook_last_error=NULL
+WHERE id=?</SET>
+          <COPY FROM="row/id" TO="args/arg[0]"/>
+        </MAP>
+        <INVOKE SERVICE="pub.db:execSQL"/>
+        <INVOKE SERVICE="pub.math:addInts">
+          <MAP>
+            <COPY FROM="processedCount" TO="int1"/>
+            <SET NAME="int2" VALUE="1"/>
+            <COPY FROM="value" TO="processedCount"/>
+          </MAP>
+        </INVOKE>
+      </SEQUENCE>
+      <SEQUENCE CASE="$default">
+        <MAP COMMENT="Mark FAILED">
+          <COPY FROM="jdbcPoolAlias" TO="poolName"/>
+          <SET NAME="sql">UPDATE orders
+SET webhook_status='FAILED',
+    webhook_attempts=webhook_attempts+1,
+    webhook_last_error=?
+WHERE id=?</SET>
+          <COPY FROM="responseBody" TO="args/arg[0]"/>
+          <COPY FROM="row/id" TO="args/arg[1]"/>
+        </MAP>
+        <INVOKE SERVICE="pub.db:execSQL"/>
+        <INVOKE SERVICE="pub.math:addInts">
+          <MAP>
+            <COPY FROM="failedCount" TO="int1"/>
+            <SET NAME="int2" VALUE="1"/>
+            <COPY FROM="value" TO="failedCount"/>
+          </MAP>
+        </INVOKE>
+      </SEQUENCE>
+    </BRANCH>
+  </LOOP>
+</FLOW>
